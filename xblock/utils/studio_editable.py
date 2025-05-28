@@ -64,33 +64,7 @@ class FutureFields:
             return getattr(self._fallback_obj, name)
 
 
-class StudioEditableXBlockMixin:
-    """
-    An XBlock mixin to provide a configuration UI for an XBlock in Studio.
-    """
-    editable_fields = ()  # Set this to a list of the names of fields to appear in the editor
-
-    def studio_view(self, context):
-        """
-        Render a form for editing this XBlock
-        """
-        fragment = Fragment()
-        context = {'fields': []}
-        # Build a list of all the fields that can be edited:
-        for field_name in self.editable_fields:
-            field = self.fields[field_name]
-            assert field.scope in (Scope.content, Scope.settings), (
-                "Only Scope.content or Scope.settings fields can be used with "
-                "StudioEditableXBlockMixin. Other scopes are for user-specific data and are "
-                "not generally created/configured by content authors in Studio."
-            )
-            field_info = self._make_field_info(field_name, field)
-            if field_info is not None:
-                context["fields"].append(field_info)
-        fragment.content = loader.render_django_template('templates/studio_edit.html', context)
-        fragment.add_javascript(loader.load_unicode('public/studio_edit.js'))
-        fragment.initialize_js('StudioEditableXBlockMixin')
-        return fragment
+class StudioXBlockMixin:
 
     def _make_field_info(self, field_name, field):  # pylint: disable=too-many-statements
         """
@@ -197,6 +171,36 @@ class StudioEditableXBlockMixin:
             info['list_values'] = list_values
             info['has_list_values'] = True
         return info
+
+
+class StudioConfigurableXBlockMixin(StudioXBlockMixin):
+
+    configurable_fields = ("tags", "name", "rerandomize")  # Set this to a list of the names of fields to appear in the editor
+
+    def get_configurable_fields_info(self):
+        """
+        Returns a dictionary with information about the configurable fields of this XBlock.
+        """
+        context = {'fields': []}
+        # Build a list of all the fields that can be edited:
+        for field_name in self.configurable_fields:
+            field = self.fields[field_name]
+            assert field.scope in (Scope.content, Scope.settings), (
+                "Only Scope.content or Scope.settings fields can be used with "
+                "StudioEditableXBlockMixin. Other scopes are for user-specific data and are "
+                "not generally created/configured by content authors in Studio."
+            )
+            field_info = self._make_field_info(field_name, field)
+            if field_info is not None:
+                context["fields"].append(field_info)
+        return context
+
+
+class StudioEditableXBlockMixin(StudioXBlockMixin):
+    """
+    An XBlock mixin to provide a configuration UI for an XBlock in Studio.
+    """
+    editable_fields = ()  # Set this to a list of the names of fields to appear in the editor
 
     @XBlock.json_handler
     def submit_studio_edits(self, data, suffix=''):  # pylint: disable=unused-argument
